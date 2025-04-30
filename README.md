@@ -12,6 +12,8 @@ The following table summarizes the process to obtain Fourier Coefficients for th
   
 </div>
 
+In general, the code can be used to obtain the Fourier Coefficients of a given curve in a plane. The first two steps must be accomplished using other software (i.e. an image processing software and a TSP solving library). For the second step, binaries for the "concorde" and "libkern" TSP solvers are included under the [bin](/bin) directory. Additionally, tools have been implemented to interface with the TSPLIB standard for TSP problems, which allow to convert an image into a TSPLIB instance and to parametrize a curve in space based on a TSP solution (a tour).
+
 ### Drawings
 Using Fourier Coefficients a doodle of the original outline can be obtained. Using more coefficients results in higher fidelity of the doodle as the Fourier Series approaches the source parametric curve, thus very high order fourier expansions are not as interesting artistically (and also require more compute resources).
 
