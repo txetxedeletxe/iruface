@@ -6,6 +6,8 @@ import numpy as np
 import colorsys
 
 from argparse import ArgumentParser
+
+import os
     
 def _build_parser():
     parser = ArgumentParser()
@@ -50,7 +52,7 @@ if __name__ == "__main__":
             else:
                 img[round(x),round(y),:] = 255
     
-    cv2.imshow("iru",img)
+    cv2.imshow(os.path.basename(args.tsp).split(".")[0],img)
     cv2.waitKey(0)
 
     cv2.destroyAllWindows()
