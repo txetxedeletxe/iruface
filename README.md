@@ -1,5 +1,5 @@
 # Iruface
-Create drawings and animations using complex fourier series to trace smooth paths (e.g. outlines of a picture).
+Create drawings and animations using complex fourier series to trace smooth paths (e.g. the outline of a picture).
 
 ### Fourier Coefficients
 The following table summarizes the process to obtain Fourier Coefficients for the outline of a photo.

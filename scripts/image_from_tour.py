@@ -12,15 +12,17 @@ import os
 def _build_parser():
     parser = ArgumentParser()
 
+    # TODO add save image feature
     parser.add_argument("tsp",help=".tsp file containing the points the curve")
     parser.add_argument("tour",help=".sol file containing a tour across the points of the curve")
+    parser.add_argument("-o","--output",dest="output",help="Output file path")
 
     image_parser = parser.add_argument_group("IMAGE")
     image_parser.add_argument("--continuity_threshold",type=float,default=None,
     help="""Max distance between adjacent points in the tour, value must be greater than one.
-    Edges between points at greater distances are not drawn. By default all edges are drawn.""")
+    Edges between points at greater distances are not drawn. By default all edges are drawn""")
     image_parser.add_argument("--rainbow_trace",action="store_true",
-    help="""Shift color during the tracing of the tour, increasing hue from start to finish.""")
+    help="""Shift color during the tracing of the tour, increasing hue from start to finish""")
 
     image_parser.set_defaults(rainbow_trace=False)
 
@@ -52,7 +54,11 @@ if __name__ == "__main__":
             else:
                 img[round(x),round(y),:] = 255
     
-    cv2.imshow(os.path.basename(args.tsp).split(".")[0],img)
-    cv2.waitKey(0)
+    # Show or save image
+    if args.output is None:
+        cv2.imshow(os.path.basename(args.tsp).split(".")[0],img)
+        cv2.waitKey(0)
 
-    cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
+    else:
+        cv2.imwrite(args.output,img)

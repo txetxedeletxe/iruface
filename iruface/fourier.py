@@ -12,12 +12,11 @@ except ImportError:
 
 import sys
 
-
 # TODO generalize to higher dimensions
 
 class FourierRuntime:
     batch_size = 4
-    use_tqdm = True
+    use_tqdm = False
     threads = None # i.e. use all threads
 
     def __init__(self,*,
@@ -35,15 +34,9 @@ class FourierRuntime:
 
 
     def fourier_coeff_from_curve(self, curve_points : np.ndarray, coeff_count : int): 
-
         f_x, f_y = curve_points.T
 
-        # Add a progress bar if tqdm is available
-        if "tqdm" in globals() and self.use_tqdm:
-            range_iterable = tqdm.trange(-coeff_count,coeff_count+1,self.batch_size)
-        else:
-            range_iterable = range(-coeff_count,coeff_count+1,self.batch_size)
-
+        # Define unit of execution
         def _runner(bi):
             coeff_range = np.arange(bi,min(bi+self.batch_size,coeff_count+1))
 
@@ -57,6 +50,13 @@ class FourierRuntime:
 
             return batch_rc, batch_ic
 
+        # Add a progress bar if tqdm is available
+        if "tqdm" in globals() and self.use_tqdm:
+            range_iterable = tqdm.trange(-coeff_count,coeff_count+1,self.batch_size)
+        else:
+            range_iterable = range(-coeff_count,coeff_count+1,self.batch_size)
+
+        # Execute workload
         if self.threads == 1:
             rc, ic = zip(*map(_runner, range_iterable))
         else:
@@ -75,16 +75,12 @@ class FourierRuntime:
 
     def evaluate_fourier_sum(self, parameter : np.ndarray, coeffs : np.ndarray, coeff_idx : np.ndarray = None):
 
+        # Assume symmetric coefficients
         if coeff_idx is None:
             coeff_count = (len(coeffs)-1)//2
             coeff_idx = np.arange(-coeff_count,coeff_count+1,dtype=int)
 
-        # Add a progress bar if tqdm is available
-        if "tqdm" in globals() and self.use_tqdm:
-            range_iterable = tqdm.trange(0,len(parameter),self.batch_size)
-        else:
-            range_iterable = range(0,len(parameter),self.batch_size)
-
+        # Define unit of execution
         def _runner(bi):
             batch_parameter = parameter[bi:bi+self.batch_size]
 
@@ -98,6 +94,13 @@ class FourierRuntime:
 
             return batch_X, batch_Y
 
+        # Add a progress bar if tqdm is available
+        if "tqdm" in globals() and self.use_tqdm:
+            range_iterable = tqdm.trange(0,len(parameter),self.batch_size)
+        else:
+            range_iterable = range(0,len(parameter),self.batch_size)
+
+        # Execute workload
         if self.threads == 1:
             X, Y = zip(*map(_runner, range_iterable))
         else:
