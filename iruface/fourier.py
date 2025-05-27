@@ -4,7 +4,6 @@ try:
     import multiprocess as mp
 except ImportError:
     pass
-
 try:
     import tqdm
 except ImportError:
@@ -16,8 +15,9 @@ import sys
 
 class FourierRuntime:
     batch_size = 4
-    use_tqdm = False
+    use_tqdm = True
     threads = None # i.e. use all threads
+
 
     def __init__(self,*,
             batch_size : int = None,
@@ -28,7 +28,8 @@ class FourierRuntime:
         if use_tqdm is not None: self.use_tqdm = use_tqdm
         if threads is not None: self.threads = threads
 
-        if "mp" not in globals():
+
+        if self.threads != 1 and "mp" not in globals():
             print("'multiprocess' module not available, parallel execution not possible! Falling back to single-thread execution.",file=sys.stderr)
             self.threads = 1
 

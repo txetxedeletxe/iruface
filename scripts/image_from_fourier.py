@@ -4,6 +4,8 @@ from iruface.tsputils import read_tsplib_tour
 import cv2
 import numpy as np
 
+import functools as ftools
+
 from argparse import ArgumentParser
 import os
 
@@ -12,6 +14,22 @@ def _build_parser():
 
     parser.add_argument("fourier",help="File with fourier coefficients")
     parser.add_argument("-o","--output",dest="output",help="Output file path")
+
+    # TODO add color controls
+    image_parser = parser.add_argument_group("IMAGE")
+    image_parser.add_argument("--background_color",default="#000000",help="Color to paint the background as.")
+
+    curve_parser = parser.add_argument_group("CURVE")
+    curve_parser.add_argument("--parameter_range",default="0:1",help="Range (in format 'start:end') of the parameter to draw. Values must be between 0 and 1.") 
+    curve_parser.add_argument("--curve_color",default="#ffffff",help="Color to paint the curve as.")
+
+    fourier_parser = parser.add_argument_group("FOURIER")
+    fourier_parser.add_argument("--fourier_order",type=int,default=None,
+    help="""Order of the fourier sum to use to approximate curve. By default all coefficients in the 'fourier' file are used""")
+    fourier_parser.add_argument("--max_phasor_order",type=int,default=-1,help="Maximum phasor order to draw, order -1 draws no phasors.") # TODO
+    fourier_parser.add_argument("--draw_phasor_circumference",action="store_true",help="Draw the circumferences of each phasor.") # TODO
+    fourier_parser.add_argument("--final_erratic_phasor",type=int,default=-1,help="Draw a final phasor as the sum of all phasors that were not drawn. This phasor might be erratic.") # TODO
+    fourier_parser.add_argument("--phasor_color",default="#00ff00",help="Color to paint the phasors as.") # TODO
 
     quality_parser = parser.add_argument_group("QUALITY")
     quality_parser.add_argument("res",help="Resolution of the output image, must be expecified in 'WxH' format")
@@ -24,9 +42,8 @@ def _build_parser():
     requireing less resources than 'points' parameter. This value should in most cases be larger than the 'points' parameter""")
     quality_parser.add_argument("--max_interpolate_deviation",type=float,default=2.0,
     help="""Maximum allowed statistical deviation between adjacent interpolated points.""")
-    quality_parser.add_argument("--fourier_order",type=int,default=None,
-    help="""Order of the fourier sum to use to approximate curve. By default all coefficients in the 'fourier' file are used""")
     
+
     smoothing_parser = parser.add_argument_group("SMOOTHING")
     smoothing_parser.add_argument("--tour",
     help="""File with TSP tour that the fourier coefficients correspond to.
@@ -42,6 +59,11 @@ def _build_parser():
     help="""Minimum strength of an interpolated point for it to be drawn in the image. 
     The threshold must be in [0,1] (and is usually close to 1)""")
 
+    animate_parser = parser.add_argument_group("ANIMATE")
+    animate_parser.add_argument("--animate",default=None,
+    help="""Define a parameter to animate, and the corresponding ranges. Using this requires defining an output_directory.
+    Format is "<parameter_name>/start/end/steps" """) # TODO
+
     return parser
 
 if __name__ == "__main__":
@@ -51,12 +73,24 @@ if __name__ == "__main__":
     with open(args.fourier) as ff:
         coeffs = [(int(ci),float(cx),float(cy)) for ci,cx,cy in map(str.split,ff)]
 
+    image_prop = dict()
+
+    # Parse color
+    bg_color = (args.background_color[1:3],args.background_color[3:5],args.background_color[5:7])
+    curve_color = (args.curve_color[1:3],args.curve_color[3:5],args.curve_color[5:7])
+
+    bg_color = list(map(ftools.partial(int,base=16),bg_color))
+    curve_color = list(map(ftools.partial(int,base=16),curve_color))
+
+    # Create canvas
     res_y, res_x = map(int,args.res.split("x"))
     center_x, center_y = res_x // 2, res_y // 2
-    img = np.zeros((res_x, res_y), dtype=np.uint8) # Create image
+
+    img = np.full((res_x, res_y,3),bg_color,dtype=np.uint8)
 
     # FILTER TOUR
-    curve_parameter = np.linspace(0,1,args.points,endpoint=False)
+    parameter_range = tuple(map(float,args.parameter_range.split(":")))
+    curve_parameter = np.linspace(*parameter_range,args.points,endpoint=False)
     if args.tour is not None:
         tour = read_tsplib_tour(args.tour)
         
@@ -88,9 +122,9 @@ if __name__ == "__main__":
     curve_mask = np.concat(([1],curve_diff < th_step))
     
     # Obtain parameter values at which to interpolate
-    interpolated_mask = np.interp(np.linspace(0,1,args.interpolate_points,endpoint=False),curve_parameter,curve_mask)
+    interpolated_mask = np.interp(np.linspace(*parameter_range,args.interpolate_points,endpoint=False),curve_parameter,curve_mask)
     interpolated_mask = interpolated_mask == 1
-    interpolated_parameter = np.interp(np.linspace(0,1,args.interpolate_points,endpoint=False),curve_parameter,curve_parameter)[interpolated_mask]
+    interpolated_parameter = np.interp(np.linspace(*parameter_range,args.interpolate_points,endpoint=False),curve_parameter,curve_parameter)[interpolated_mask]
 
     # interpolate
     X = np.interp(interpolated_parameter,curve_parameter,XY[:,0])
@@ -100,7 +134,7 @@ if __name__ == "__main__":
     X_pix = np.clip(np.round(X),0,res_x-1).astype(dtype=int)
     Y_pix = np.clip(np.round(Y),0,res_y-1).astype(dtype=int)
 
-    img[X_pix,Y_pix] = 255 # Set image pixels to white
+    img[X_pix,Y_pix,:] = curve_color # Set image pixels to color
 
     # Show or save image
     if args.output is None:
